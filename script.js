@@ -418,9 +418,9 @@ app.Timer.prototype = {
     },
 
     // Метод для определения количества очков. Формула взята для примера.
-    getScore: function () {
+    /*getScore: function () {
         return Math.trunc(Math.pow(app.parameters.hided * app.parameters.area, 2) * 1000 / this.now);
-    },
+    },*/
 
     stop: function () {
         clearInterval(this.timer);
@@ -453,6 +453,6 @@ let timer = new app.Timer();
 document.body.querySelector("#playGround").appendChild(timer.content);
 
 tbl.win = function () {
-    alert("Поздравляем! Вы победили со счетом " + timer.getScore());
+    alert("Поздравляем! Вы победили. " + "Игра продлилась" + timer.now + " сек.");
     timer.stop();
 }

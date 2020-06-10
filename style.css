@@ -35,3 +35,24 @@ html {
 .sudoku td.right {
     border-right: 2px solid;
 }
+
+.sudoku input {
+    width: inherit;
+    height: inherit;
+    padding: 0;
+    text-align: center;
+    color: brown;
+    background: none;
+}
+
+.sudoku .marked {
+    background-color: #9ce29c;
+}
+
+.sudoku .mistake {
+    background-color: darksalmon;
+}
+
+.timer .display {
+    margin: 2em;
+}

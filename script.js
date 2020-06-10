@@ -39,12 +39,36 @@ Array.method("shuffle", function () {
     }
 });
 
+/**
+ * Метод нахоит член массива со значением find, меняет его на replace
+ * */
+Array.method("findAndReplace", function (find, replace) {
+    let index = this.indexOf(find);
+    if (index > -1) {
+        this[index] = replace;
+    }
+});
+
+/**
+ * Метод проверяет все члены массива на соответствие value.
+ * Если все равны - вернёт true
+ * */
+Array.method("allMembers", function (value) {
+    for (let i = 0; i < this.length; i += 1) {
+        if (this[i] !== value) {
+            return false;
+        }
+    }
+    return true;
+});
+
 Element.method("addClass", function (className) {
     let classes = this.className.split(" ");
     if (classes.indexOf(className) < 0) {
         classes.push(className);
         this.className = classes.join(" ").trim();
     }
+    return this;
 });
 
 Element.method("removeClass", function (className) {
@@ -54,6 +78,7 @@ Element.method("removeClass", function (className) {
         classes.splice(index, 1);
         this.className = classes.join(" ").trim();
     }
+    return this;
 });
 
 let app = {};
@@ -101,7 +126,158 @@ app.Sudoku.prototype = {
                 cell.innerHTML = values[i][j];
             }
         }
-    }
+    },
+
+    // метод скрывает count полей в случайном порядке, меняет их на поля для ввода
+    hide: function (count) {
+        let that = this;
+        for (let i = 0; i < count; i += 1) {
+            let processing = true;
+            // избегаем повторения полей, чтобы скрыть нужное количество
+            while (processing) {
+                let rowNumber = util.randomInteger(0, that.expo - 1);
+                let colNumber = util.randomInteger(0, that.expo - 1);
+                // если поле уже скрыто, выбираем новое значение
+                if (!that.table.rows[rowNumber].cells[colNumber].hided) {
+                    that.table.rows[rowNumber].cells[colNumber].hided = true;
+                    that.table.rows[rowNumber].cells[colNumber].innerHTML = "";
+                    let editCell = document.createElement("input");
+                    that.table.rows[rowNumber].cells[colNumber].appendChild(editCell);
+                    that.table.rows[rowNumber].cells[colNumber].editCell = editCell;
+                    // Добавляем событие наизменение значения
+                    editCell.addEventListener("change", function () {
+                        // метод проверки описан ниже
+                        that.check();
+                    });
+                    processing = false;
+                }
+            }
+        }
+        // Выполняем проверку уже совпавших рядов. В идеале, таких быть не должно.
+        that.check();
+    },
+
+    // Метод проверяет состояние игры
+    check: function () {
+        let that = this;
+        that.unmark();
+        // Создаём и заполняем проверочные массивы.
+        // По ним отслежываем, чтобы значения не повторялись
+        let rows = [];
+        let columns = [];
+        let areas = [];
+        for (let i = 0; i < that.expo; i += 1) {
+            rows.push([].fillIncr(that.expo, 1));
+            columns.push([].fillIncr(that.expo, 1));
+            areas.push([].fillIncr(that.expo, 1));
+        }
+        // Проверяем значения
+        Array.prototype.forEach.call(that.table.rows, function (row, i) {
+            Array.prototype.forEach.call(row.cells, function (cell, j) {
+                let value = that.getValue(cell);
+                // В проверочных массивах заменяем существующие в игровом поле значения на нули
+                rows[i].findAndReplace(value, 0);
+                columns[j].findAndReplace(value, 0);
+                areas[that.getArea(i, j)].findAndReplace(value, 0);
+            });
+        });
+        // Проверяем правильность заполнения, создаём счётчик для проверки
+        let correct = {
+            rows: 0,
+            columns: 0,
+            areas: 0,
+        };
+
+        for (let i = 0; i < that.expo; i += 1) {
+            // если все цифры в группе уникальны, помечаем группу, увеличиваем счетчик
+            if (rows[i].allMembers(0)) {
+                that.markRow(i);
+                correct.rows += 1;
+            }
+            if (columns[i].allMembers(0)) {
+                that.markColumn(i);
+                correct.columns += 1;
+            }
+            if (areas[i].allMembers(0)) {
+                that.markArea(i);
+                correct.areas += 1;
+            }
+        }
+        // Если все группы отмеченны как правильные, игра заканчивается
+        if (correct.rows === that.expo &&
+            correct.columns === that.expo &&
+            correct.areas === that.expo) {
+            // Функцйию win определяем на любом этапе (позднее), но обязательно проверяем ее существование и тип
+            if (typeof (that.win) === "function") {
+                that.win();
+            }
+        }
+    },
+
+    // Метод отмечает ячейку cell классом, либо снимает класс - в зависимости от state
+    markCell: function (cell, state) {
+        if (state) {
+            cell.addClass("marked");
+        } else {
+            cell.removeClass("marked");
+        }
+    },
+
+    // Возвращяет значение ячейки, для поля, либо простой ячейки
+    getValue: function (cell) {
+        if (cell.editCell) {
+            return parseInt(cell.editCell.value, 10);
+        } else {
+            return parseInt(cell.innerHTML, 10);
+        }
+    },
+
+    // Отмечает строку целиком
+    markRow: function (number) {
+        let that = this;
+        Array.prototype.forEach.call(that.table.rows[number].cells, function (cell) {
+            that.markCell(cell, true);
+        });
+    },
+
+    // Отмечает колонку целиком
+    markColumn: function (number) {
+        let that = this;
+        Array.prototype.forEach.call(that.table.rows, function (row) {
+            that.markCell(row.cells[number], true);
+        });
+    },
+
+    // Отмечает область целиком
+    markArea: function (number) {
+        let that = this;
+        let area = Math.sqrt(that.expo);
+        let startRow = Math.trunc(number / area,) * area;
+        let startColumn = (number % area) * area;
+
+        for (let i = 0; i < area; i += 1) {
+            for (let j = 0; j < area; j++) {
+                that.markCell(that.table.rows[i + startRow].cells[j + startColumn], true);
+            }
+        }
+    },
+
+    // Снимает отметки со всего игрового поля
+    unmark: function () {
+        let that = this;
+        Array.prototype.forEach.call(that.table.rows, function (row) {
+            Array.prototype.forEach.call(row.cells, function (cell) {
+                that.markCell(cell, false);
+            });
+        });
+    },
+
+    // Возвращает номер области по номеру строки и столбца
+    getArea: function (row, column) {
+        let that = this;
+        let area = Math.sqrt(that.expo);
+        return Math.trunc(row / area) * area + Math.trunc(column / area);
+    },
 }
 
 app.Generator = function (areaNum) {
@@ -143,11 +319,10 @@ app.Generator.prototype = {
      */
     getPosition: function () {
         let source = [].fillIncr(this.area);
-        let positions = {
+        return {
             startPos: source.popRandom(),
             destPos: source.popRandom(),
-        }
-        return positions;
+        };
     },
 
     //перемешать строки
@@ -219,14 +394,65 @@ app.Generator.prototype = {
     }
 }
 
-let tbl = new app.Sudoku();
+// Конструктор для типа Timer, который отвечает за учет времени и очков
+app.Timer = function () {
+    let that = this;
+    let content = document.createElement("div").addClass("timer");
+    let display = document.createElement("div").addClass("display");
+    content.appendChild(display);
+    that.now = 0;
+    that.timer = setInterval(function () {
+        that.now += 1;
+        that.refresh();
+    }, 1000);
+    that.content = content;
+    that.display = display;
+    that.refresh();
+}
+
+app.Timer.prototype = {
+    // Метод для обновления состояния времени
+    refresh: function () {
+        let that = this;
+        that.display.innerHTML = "Прошло времени: " + that.now + " сек.";
+    },
+
+    // Метод для определения количества очков. Формула взята для примера.
+    getScore: function () {
+        return Math.trunc(Math.pow(app.parameters.hided * app.parameters.area, 2) * 1000 / this.now);
+    },
+
+    stop: function () {
+        clearInterval(this.timer);
+    },
+}
+
+app.parameters = {
+    area: 3, // размер области
+    shuffle: 15, // количество перемешиваний
+    hided: 2, // количество скрытых ячеек
+}
+
+let tbl = new app.Sudoku(app.parameters.area);
 document.body.querySelector("#playGround").appendChild(tbl.table);
-let generator = new app.Generator();
-generator.swapColumnsRange(15)
-    .swapRowsRange(15)
-    .swapColumns(15)
-    .swapRows(15)
+
+let generator = new app.Generator(app.parameters.area);
+generator.swapColumnsRange(app.parameters.shuffle)
+    .swapRowsRange(app.parameters.shuffle)
+    .swapColumns(app.parameters.shuffle)
+    .swapRows(app.parameters.shuffle)
     .shakeAll();
+
 util.randomInteger(0, 1) ? generator.invertHorizontal() : 0;
 util.randomInteger(0, 1) ? generator.invertVertical() : 0;
+
 tbl.fill(generator.rows);
+tbl.hide(app.parameters.hided);
+
+let timer = new app.Timer();
+document.body.querySelector("#playGround").appendChild(timer.content);
+
+tbl.win = function () {
+    alert("Поздравляем! Вы победили со счетом " + timer.getScore());
+    timer.stop();
+}

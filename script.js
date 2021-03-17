@@ -414,7 +414,7 @@ app.Timer.prototype = {
     // Метод для обновления состояния времени
     refresh: function () {
         let that = this;
-        that.display.innerHTML = "Прошло времени: " + that.now + " сек.";
+        that.display.innerHTML = "Time passed: " + that.now + " sec.";
     },
 
     // Метод для определения количества очков. Формула взята для примера.
@@ -453,6 +453,6 @@ let timer = new app.Timer();
 document.body.querySelector("#playGround").appendChild(timer.content);
 
 tbl.win = function () {
-    alert("Поздравляем! Вы победили. " + "Игра продлилась" + timer.now + " сек.");
+    alert("Congratulations! You won. " + "The game lasted" + timer.now + " sec.");
     timer.stop();
 }

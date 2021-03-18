@@ -452,7 +452,7 @@ tbl.hide(app.parameters.hided);
 let timer = new app.Timer();
 document.body.querySelector("#playGround").appendChild(timer.content);
 
-tbl.win = function () {
-    alert("Congratulations! You won. " + "The game lasted" + timer.now + " sec.");
+tbl.win = function ()  {
+    alert("Congratulations! You won. " + "The game lasted " + timer.now + " sec.");
     timer.stop();
 }
